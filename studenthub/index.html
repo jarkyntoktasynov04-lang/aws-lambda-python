@@ -1,0 +1,276 @@
+
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudentHub — Менің оқу жоспарым</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f6fc;
+      color: #172033;
+    }
+
+    header {
+      background: #172554;
+      color: white;
+      padding: 22px 7%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h2 { margin: 0; }
+    header span { color: #bfdbfe; }
+
+    main {
+      max-width: 900px;
+      margin: 35px auto;
+      padding: 0 18px;
+    }
+
+    .hero {
+      background: linear-gradient(120deg, #1d4ed8, #6366f1);
+      color: white;
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 22px;
+    }
+
+    .hero h1 { margin-top: 0; }
+    .hero p { line-height: 1.6; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+
+    .stat, .panel {
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 5px 20px #1725540a;
+    }
+
+    .stat p { color: #64748b; margin: 0 0 8px; }
+    .stat h2 { margin: 0; font-size: 28px; }
+
+    .form {
+      display: flex;
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    input, select, button {
+      font: inherit;
+      padding: 12px;
+      border-radius: 9px;
+    }
+
+    input, select {
+      border: 1px solid #dbe2ef;
+      background: white;
+    }
+
+    input { flex: 1; min-width: 0; }
+
+    button {
+      border: none;
+      cursor: pointer;
+      background: #315be8;
+      color: white;
+    }
+
+    button:hover { opacity: .88; }
+
+    .task {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 15px 0;
+      border-bottom: 1px solid #e8edf5;
+    }
+
+    .task:last-child { border-bottom: none; }
+    .task input { flex: none; width: 18px; height: 18px; }
+    .task-info { flex: 1; overflow-wrap: anywhere; }
+    .task small { display: block; color: #64748b; margin-top: 5px; }
+    .done .task-info strong {
+      text-decoration: line-through;
+      color: #94a3b8;
+    }
+
+    .delete { background: #fee2e2; color: #b91c1c; }
+    .status { margin-top: 18px; font-size: 14px; color: #475569; }
+    .status strong { color: #15803d; }
+
+    footer { text-align: center; color: #64748b; padding: 25px; }
+
+    @media (max-width: 560px) {
+      .stats { grid-template-columns: 1fr; }
+      .form { flex-wrap: wrap; }
+      .form input { flex-basis: 100%; }
+      header { padding: 18px; }
+      .hero { padding: 23px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>🎓 StudentHub</h2>
+    <span>Оқу жоспары</span>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>Оқуыңды басқар!</h1>
+      <p>Тапсырмаларыңды жоспарла, орындалуын белгіле
+        және оқу мақсатыңа сенімді қадам жаса.</p>
+    </section>
+
+    <section class="stats">
+      <div class="stat">
+        <p>Барлық тапсырма</p>
+        <h2 id="total">0</h2>
+      </div>
+      <div class="stat">
+        <p>Орындалды</p>
+        <h2 id="completed">0</h2>
+      </div>
+      <div class="stat">
+        <p>Қалды</p>
+        <h2 id="remaining">0</h2>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Менің тапсырмаларым</h2>
+      <form class="form" id="taskForm">
+        <input id="taskInput" placeholder="Жаңа тапсырма..." required>
+        <button type="submit">+ Қосу</button>
+      </form>
+      <div id="taskList"></div>
+    </section>
+
+    <section class="panel" style="margin-top:20px">
+      <h3>☁️ AWS Lambda байланысы</h3>
+      <p>Backend сервисінің қолжетімділігін тексер.</p>
+      <button id="checkApi">Lambda-ны тексеру</button>
+      <p class="status" id="apiStatus">Әзірге тексерілген жоқ.</p>
+    </section>
+  </main>
+
+  <footer>StudentHub © 2026 · GitHub + AWS Lambda</footer>
+
+  <script>
+    const STORAGE_KEY = "studenthub_tasks";
+    let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+
+    // API Gateway HTTP API адресін осы жерге енгіз.
+    const API_URL = "";
+
+    const taskList = document.getElementById("taskList");
+
+    function saveTasks() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      renderTasks();
+    }
+
+    function renderTasks() {
+      taskList.replaceChildren();
+
+      tasks.forEach(task => {
+        const row = document.createElement("div");
+        row.className = "task" + (task.done ? " done" : "");
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = task.done;
+        checkbox.setAttribute("aria-label", "Тапсырманы аяқтау");
+        checkbox.addEventListener("change", () => {
+          task.done = checkbox.checked;
+          saveTasks();
+        });
+
+        const info = document.createElement("div");
+        info.className = "task-info";
+
+        const title = document.createElement("strong");
+        title.textContent = task.title;
+
+        const date = document.createElement("small");
+        date.textContent = "StudentHub тапсырмасы";
+
+        info.append(title, date);
+
+        const remove = document.createElement("button");
+        remove.className = "delete";
+        remove.textContent = "Жою";
+        remove.addEventListener("click", () => {
+          tasks = tasks.filter(item => item.id !== task.id);
+          saveTasks();
+        });
+
+        row.append(checkbox, info, remove);
+        taskList.append(row);
+      });
+
+      document.getElementById("total").textContent = tasks.length;
+      document.getElementById("completed").textContent =
+        tasks.filter(task => task.done).length;
+      document.getElementById("remaining").textContent =
+        tasks.filter(task => !task.done).length;
+    }
+
+    document.getElementById("taskForm").addEventListener("submit", event => {
+      event.preventDefault();
+
+      const input = document.getElementById("taskInput");
+      const title = input.value.trim();
+
+      if (!title) return;
+
+      tasks.push({
+        id: Date.now() + Math.random(),
+        title,
+        done: false
+      });
+
+      input.value = "";
+      saveTasks();
+    });
+
+    document.getElementById("checkApi").addEventListener("click", async () => {
+      const status = document.getElementById("apiStatus");
+
+      if (!API_URL) {
+        status.textContent =
+          "API адресын қосу қажет. Алдымен AWS Lambda мен API Gateway бапта.";
+        return;
+      }
+
+      status.textContent = "Қосылуда...";
+
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error("HTTP " + response.status);
+
+        const data = await response.json();
+        status.textContent = "Жауап: " + JSON.stringify(data);
+      } catch (error) {
+        status.textContent =
+          "Қате: " + error.message +
+          ". API Gateway және CORS баптауларын тексер.";
+      }
+    });
+
+    renderTasks();
+  </script>
+</body>
+</html>
